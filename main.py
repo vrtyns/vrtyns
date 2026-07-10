@@ -1197,13 +1197,13 @@ async def profile(interaction: discord.Interaction):
     embed.set_thumbnail(url=interaction.user.display_avatar.url)
     # embed.add_field(name="📊 เลเวล / EXP",    value=f"Lv. **{u['level']}**\n{exp_bar(u['exp'], u['exp_max'])}", inline=True)
     embed.add_field(name="<:hp_heart:1521868611524759704> **HP**  <:mp_heart:1521868748431163492> **MANA**", value=f"`{u['hp']}/{u['hp_max']}` | `{u['mana']}/{u['mana_max']}`", inline=True)
-    embed.add_field(name="🎭 **SAN**", value=f"`{u['san']}/{u['san_max']}`", inline=True)
+    embed.add_field(name="**SAN**", value=f"`{u['san']}/{u['san_max']}`", inline=True)
     # embed.add_field(name="\u200b", value="\u200b", inline=False)
     # embed.add_field(name="status",
     #                 value=(f"**ATK** {u['atk']}   **INT** {u['int_stat']}\n"
     #                        f"**AGI** {u['agi']}   **VIT** {u['vit']}\n"
     #                        f"**DEX** {u['dex']}"), inline=True)
-    embed.add_field(name="**STR** 🟥  **VIT** 🟧  **AGI** 🟨", value=f"ㅤㅤ`{u['str']}`ㅤㅤㅤ`{u['vit']}`ㅤㅤㅤ`{u['agi']}`", inline=False)
+    embed.add_field(name="**STR** 🟥  **VIT** 🟧  **AGI** 🟨", value=f"`{u['str']}`ㅤㅤㅤ`{u['vit']}`ㅤㅤㅤ`{u['agi']}`", inline=False)
     embed.add_field(name="<:acoin:1521901067602759882> **Coin** <:banknote_pixel:1521902802975068432> **Sil**", value=f"**{u['coin']:,}** | **{u['sil']:,}** ", inline=True)
     # if is_new:
     #     embed.set_footer(text="🎁 ยินดีต้อนรับ! ได้รับเมล็ดพันธุ์เริ่มต้น 5 เมล็ดทุกชนิด")
