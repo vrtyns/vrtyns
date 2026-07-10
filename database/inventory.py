@@ -68,6 +68,12 @@ ITEMS: dict = {
                           "effect": {"max_hp": 20}},
     "potion_max_mana":   {"name": "โพชั่นเสริมจิต",    "emoji": "<:mp_heart:1521868748431163492>", "type": "consumable", "value": 2000,
                           "effect": {"max_mana": 15}},
+    
+    # misc — ไอเทม no effect เก็บสะสมหรือ quest item
+    "item_key":        {"name": "Key",          "emoji": "🗝️", "type": "misc", "value": 0},
+    "item_scroll":     {"name": "Old Scroll",   "emoji": "📜", "type": "misc", "value": 0},
+    # "item_gem":        {"name": "Gem",          "emoji": "💠", "type": "misc", "value": 0},
+    # เพิ่มไอเทม misc ใหม่ที่นี่ได้เลย
 }
 
 # ── ตารางน้ำหนักการขุดแร่ ─────────────────────────────────

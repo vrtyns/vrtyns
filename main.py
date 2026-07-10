@@ -62,6 +62,7 @@ async def build_inventory_embed(user: discord.Member) -> discord.Embed | None:
         "crop":       [],
         "ore":        [],
         "consumable": [],
+        "misc":       [],
     }
     for row in items:
         item = database.ITEMS.get(row["item_id"])
@@ -74,6 +75,7 @@ async def build_inventory_embed(user: discord.Member) -> discord.Embed | None:
         "crop":       "<:apple_pixel:1521869087486246962> Crops",
         "ore":        "<:mitthrium:1521877811344707756> Ores",
         "consumable": "<:hp_potion:1523005714904121547> Items",
+        "misc":        "<:inventory:1523010328495915190> Items",
     }
     for key, label in labels.items():
         if groups[key]:
@@ -205,9 +207,7 @@ class ProfileView(discord.ui.View):
             color=discord.Color.yellow()
         )
         for sk in skills:
-            u, _ = database.get_or_create_user(self.user_id)
-            embed.add_field(name="status",
-                    value=(f"⚔️ **ATK** {u['atk']} | 🛡️ **VIT** {u['vit']} | 🍃 **AGI** {u['agi']}\n"), inline=True)
+    
             embed.add_field(
                 name=f"{sk['name']}",
                 value=sk["description"] or "_No description available_",
@@ -433,7 +433,7 @@ class ShopCategoryView(discord.ui.View):
         if not await self._check(interaction): return
         await self._open(interaction, "crop", ":apple_pixel:1521869087486246962> Fruits Shop", discord.Color.dark_orange())
         
-    @discord.ui.button(label="⛏️ Ore Shop", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="⛏️ Ore Market", style=discord.ButtonStyle.secondary, row=0)
     async def ore_shop(self, interaction: discord.Interaction, _: discord.ui.Button):
         if not await self._check(interaction): return
         await self._open(interaction, "ore", "<:ingotgold:1523335798978777110> Ore Shop", discord.Color.dark_blue())
@@ -655,6 +655,35 @@ class AdminCommands(
         await interaction.response.send_message(
             f"<:mp_heart:1521868748431163492> MANA ของ **{user.display_name}** คงเหลือ..\n"
             f"`{u['mana']} → {new_mana} / {u['mana_max']}` ({action})"
+        )
+    
+    @app_commands.command(name="edit_status", description="แก้ไขค่าสเตตัสของผู้เล่น")
+    @app_commands.describe(user="ผู้เล่น", stat="ค่าที่ต้องการแก้", value="ค่าใหม่")
+    @app_commands.choices(stat=[
+        app_commands.Choice(name="⚔️ STR", value="str"),
+        app_commands.Choice(name="🧠 INT", value="int_stat"),
+        app_commands.Choice(name="✨ DEX", value="dex"),
+        app_commands.Choice(name="🛡️ VIT", value="vit"),
+        app_commands.Choice(name="🏃 AGI", value="agi"),
+    ])
+    async def edit_status(
+        self, interaction: discord.Interaction,
+        user: discord.Member,
+        stat: str,
+        value: app_commands.Range[int, 1, 9999],
+    ):
+        if not await self._require_admin(interaction): return
+        database.get_or_create_user(str(user.id))
+        with database.get_conn() as conn:
+            conn.execute(
+                f"UPDATE users SET {stat} = ? WHERE user_id = ?",
+                (value, str(user.id))
+            )
+        stat_display = {"str": "STR", "int_stat": "INT", "dex": "DEX",
+                        "vit": "VIT", "agi": "AGI"}
+        await interaction.response.send_message(
+            f"✅ แก้ไข **{stat_display[stat]}** ของ **{user.display_name}** "
+            f"เป็น **{value}** สำเร็จ!"
         )
         
     @app_commands.command(name="set_sanity", description="เพิ่ม/หัก SANITY ผู้เล่น (ใส่เลขลบเพื่อหัก)")
@@ -887,7 +916,7 @@ class AdminCommands(
     app_commands.Choice(name="mp_potion   (MANA +50)",          value="potion_mana"),
     app_commands.Choice(name="full_potion       (HP+MANA full)",      value="potion_full"),
     app_commands.Choice(name="dice_potion   (dice +1 / 3 hrs.)",   value="potion_dice"),
-    app_commands.Choice(name="atk_potion   (ATK *2 / 2 hrs.)",  value="potion_atk"),
+    app_commands.Choice(name="str_potion   (STR *2 / 2 hrs.)",  value="potion_str"),
     app_commands.Choice(name="vit_potion   (VIT *2 / 2 hrs.)",  value="potion_vit"),
     app_commands.Choice(name="cleanse_potion     (cleanse 1 of debuff)", value="potion_cleanse"),
     app_commands.Choice(name="fire_potion      (fire resistance / 2 hrs.)",    value="potion_fire"),
@@ -917,6 +946,59 @@ class AdminCommands(
             f"to **{user.display_name}** successfully!"
             f"คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
         )
+        
+    @app_commands.command(name="give_misc", description="give item (no effect) to player (Admin only)")
+    @app_commands.describe(user="player", item_id="ID of item", quantity="quantity")
+    @app_commands.choices(item_id=[
+    app_commands.Choice(name="🗝️ Key",        value="item_key"),
+    app_commands.Choice(name="📜 Old Scroll",  value="item_scroll"),
+    # app_commands.Choice(name="💠 Gem",         value="item_gem"),
+    ])
+    async def give_misc(
+        self, interaction: discord.Interaction,
+        user: discord.Member,
+        item_id: str,
+        quantity: app_commands.Range[int, 1, 99] = 1,
+    ):
+        if not await self._require_admin(interaction): return
+        item = database.ITEMS.get(item_id)
+        if not item:
+            await interaction.response.send_message(f"*Item not found!*", ephemeral=True)
+            return
+        database.get_or_create_user(str(user.id))
+        database.add_item(str(user.id), item_id, quantity)
+        await interaction.response.send_message(
+            f"✅ *give {item['emoji']} **{item['name']}** ×{quantity}* "
+            f"*to __{user.display_name}__ successfully!*"
+        )
+
+    @app_commands.command(name="take_item", description="remove item from player (Admin only)")
+    @app_commands.describe(user="player", item_name="name of the item", quantity="quantity to remove")
+    async def take_item(
+        self, interaction: discord.Interaction,
+        user: discord.Member,
+        item_name: str,
+        quantity: app_commands.Range[int, 1, 99] = 1,
+    ):
+        if not await self._require_admin(interaction): return
+        found_id = next((
+            iid for iid, data in database.ITEMS.items()
+            if data["name"] == item_name
+        ), None)
+        if not found_id:
+            await interaction.response.send_message(
+                f"*Item not found!*", ephemeral=True)
+            return
+        ok = database.remove_item(str(user.id), found_id, quantity)
+        if ok:
+            item = database.ITEMS[found_id]
+            await interaction.response.send_message(
+                f"*remove {item['emoji']} **{item['name']}** ×{quantity}*"
+                f"*from __{user.display_name}__ successfully!*"
+            )
+        else:
+            await interaction.response.send_message(
+                f"*{user.display_name} has insufficient {item_name}*", ephemeral=True)
 
         # # DM แจ้ง user
         # effect = item.get("effect", {})
@@ -939,13 +1021,13 @@ class AdminCommands(
     @app_commands.describe(
         user="player",
         buff_type="buff type",
-        value="value of the buff (e.g., 1 for dice, 20 for ATK%, 50 for HP)",
+        value="value of the buff (e.g., 1 for dice, 20 for str%, 50 for HP)",
         hours="duration (hours) — enter 0 for no expiration",
         description="description of the buff to display in the profile",
     )
     @app_commands.choices(buff_type=[
         app_commands.Choice(name="Dice +N",          value="dice_bonus"),
-        app_commands.Choice(name="ATK% +N",    value="atk_bonus"),
+        app_commands.Choice(name="STR% +N",    value="str_bonus"),
         app_commands.Choice(name="VIT% +N",    value="vit_bonus"),
         app_commands.Choice(name="Fire Resistance",        value="fire_resist"),
         app_commands.Choice(name="Max HP +N",         value="max_hp_bonus"),
@@ -1121,6 +1203,7 @@ async def profile(interaction: discord.Interaction):
     #                        f"**AGI** {u['agi']}   **VIT** {u['vit']}\n"
     #                        f"**DEX** {u['dex']}"), inline=True)
     embed.add_field(name="<:acoin:1521901067602759882> **Coin** <:banknote_pixel:1521902802975068432> **Sil**", value=f"**{u['coin']:,}** | **{u['sil']:,}** ", inline=True)
+    embed.add_field(name="🟥 **STR**  🟧 **VIT**  🟨 **AGI**", value=f"`{u['str']}` | `{u['vit']}` | `{u['agi']}`", inline=False)
     # if is_new:
     #     embed.set_footer(text="🎁 ยินดีต้อนรับ! ได้รับเมล็ดพันธุ์เริ่มต้น 5 เมล็ดทุกชนิด")
     await interaction.response.send_message(embed=embed, view=ProfileView(uid))
