@@ -1203,7 +1203,7 @@ async def profile(interaction: discord.Interaction):
     #                        f"**AGI** {u['agi']}   **VIT** {u['vit']}\n"
     #                        f"**DEX** {u['dex']}"), inline=True)
     embed.add_field(name="<:acoin:1521901067602759882> **Coin** <:banknote_pixel:1521902802975068432> **Sil**", value=f"**{u['coin']:,}** | **{u['sil']:,}** ", inline=True)
-    embed.add_field(name="🟥 **STR**  🟧 **VIT**  🟨 **AGI**", value=f"      `{u['str']}`      `{u['vit']}`      `{u['agi']}`", inline=False)
+    embed.add_field(name="🟥 **STR**  🟧 **VIT**  🟨 **AGI**", value=f"`{u['str']}``{u['vit']}``{u['agi']}`", inline=True)
     # if is_new:
     #     embed.set_footer(text="🎁 ยินดีต้อนรับ! ได้รับเมล็ดพันธุ์เริ่มต้น 5 เมล็ดทุกชนิด")
     await interaction.response.send_message(embed=embed, view=ProfileView(uid))
