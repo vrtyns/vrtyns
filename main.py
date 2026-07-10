@@ -968,7 +968,7 @@ class AdminCommands(
         database.get_or_create_user(str(user.id))
         database.add_item(str(user.id), item_id, quantity)
         await interaction.response.send_message(
-            f"✅ *give {item['emoji']} **{item['name']}** ×{quantity}* "
+            f"*give {item['emoji']} **{item['name']}** ×{quantity}* "
             f"*to __{user.display_name}__ successfully!*"
         )
 
