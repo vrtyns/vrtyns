@@ -21,11 +21,7 @@ import re
 load_dotenv()
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="v!", intents=intents)
-GUILD_IDS = [
-    discord.Object(id=int(gid.strip()))
-    for gid in os.getenv("GUILD_IDS", "").split(",")
-    if gid.strip()
-]
+GUILD   = discord.Object(id=int(os.getenv("GUILD_ID")))
 intents = discord.Intents.default()
 intents.members = True   # ← เพิ่มบรรทัดนี้ (ต้องการสำหรับ add_roles/remove_roles)
 
