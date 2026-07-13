@@ -992,11 +992,11 @@ class AdminCommands(
         if ok:
             item = database.ITEMS[found_id]
             await interaction.response.send_message(
-                f"**{user.display_name}** ได้สูญเสีย __{item['name']} {item['emoji']}__ ×{quantity}"
+                f"**{user.display_name}** ได้สูญเสีย __{item_name} {item['emoji']}__ ×{quantity}"
             )
         else:
             await interaction.response.send_message(
-                f"*{user.display_name} ไม่มี {item_name}*", ephemeral=True)
+                f"*{user.display_name} ไม่มี {item_name} {item['emoji']}*", ephemeral=True)
 
         # # DM แจ้ง user
         # effect = item.get("effect", {})
@@ -1417,12 +1417,12 @@ async def use_item(interaction: discord.Interaction, item_name: str):
  
     if not found_id:
         await interaction.response.send_message(
-            f"ไม่สามารถใช้ **{item_name} {item['emoji']}** ได้", ephemeral=True)
+            f"ไม่สามารถใช้ **{item_name}** ได้", ephemeral=True)
         return
  
     if not database.has_item(uid, found_id):
         await interaction.response.send_message(
-            f" เอ..คุณไม่มี **{item_name} {item['emoji']}** นะ?", ephemeral=True)
+            f" เอ..คุณไม่มี **{item_name}** นะ?", ephemeral=True)
         return
  
     item   = database.ITEMS[found_id]
