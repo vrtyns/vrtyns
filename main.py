@@ -21,7 +21,8 @@ import re
 load_dotenv()
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="v!", intents=intents)
-GUILD   = discord.Object(id=int(os.getenv("GUILD_ID")))
+GUILD_IDS = [int(gid.strip()) for gid in os.getenv("GUILD_IDS", "").split(",") if gid.strip()]
+GUILD   = discord.Object(id=GUILD_IDS[0]) if GUILD_IDS else None
 intents = discord.Intents.default()
 intents.members = True   # ← เพิ่มบรรทัดนี้ (ต้องการสำหรับ add_roles/remove_roles)
 
@@ -942,7 +943,7 @@ class AdminCommands(
 
         # แจ้ง admin
         await interaction.response.send_message(
-            f"**{user.display_name}** ได้รับ __{item['name']}, {item['emoji']}__ ×{quantity}"
+            f"**{user.display_name}** ได้รับ __{item['name']} {item['emoji']}__ ×{quantity}"
             f" คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
         )
         
@@ -967,7 +968,7 @@ class AdminCommands(
         database.get_or_create_user(str(user.id))
         database.add_item(str(user.id), item_id, quantity)
         await interaction.response.send_message(
-            f"**{user.display_name}** ได้รับ __{item['name']}, {item['emoji']}__ ×{quantity}"
+            f"**{user.display_name}** ได้รับ __{item['name']} {item['emoji']}__ ×{quantity}"
             f" คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
         )
 
@@ -992,11 +993,11 @@ class AdminCommands(
         if ok:
             item = database.ITEMS[found_id]
             await interaction.response.send_message(
-                f"**{user.display_name}** ได้สูญเสีย __{item['name']}, {item['emoji']}__ ×{quantity}"
+                f"**{user.display_name}** ได้สูญเสีย __{item['name']} {item['emoji']}__ ×{quantity}"
             )
         else:
             await interaction.response.send_message(
-                f"*{user.display_name} ไม่มี {item_name}*", ephemeral=True)
+                f"*{user.display_name} ไม่มี {item_name} {item['emoji']}*", ephemeral=True)
 
         # # DM แจ้ง user
         # effect = item.get("effect", {})
@@ -1417,12 +1418,12 @@ async def use_item(interaction: discord.Interaction, item_name: str):
  
     if not found_id:
         await interaction.response.send_message(
-            f"Item **{item_name}** not found or cannot be used", ephemeral=True)
+            f"ไม่สามารถใช้ **{item_name} {item['emoji']}** ได้", ephemeral=True)
         return
  
     if not database.has_item(uid, found_id):
         await interaction.response.send_message(
-            f" You don't have **{item_name}** in your inventory", ephemeral=True)
+            f" เอ..คุณไม่มี **{item_name} {item['emoji']}** นะ?", ephemeral=True)
         return
  
     item   = database.ITEMS[found_id]
@@ -1589,8 +1590,13 @@ async def trade_cmd(interaction: discord.Interaction, user: discord.Member):
 
 @bot.event
 async def on_ready():
-    database.setup()
-    await bot.tree.sync(guild=GUILD)
+    print(f"Logged in as {bot.user}")
+    
+    # ลูปเพื่อ Sync คำสั่งให้เข้าทั้ง 2 เซิร์ฟเวอร์ทันที
+    for guild_id in GUILD_IDS:
+        guild = discord.Object(id=guild_id)
+        bot.tree.copy_global_to(guild=guild) # ก๊อปปี้คำสั่งไปที่กิลด์นั้นๆ
+        await bot.tree.sync(guild=guild)
     if not scheduled_message_task.is_running():
         scheduled_message_task.start()
     print("=" * 40)
