@@ -21,8 +21,7 @@ import re
 load_dotenv()
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="v!", intents=intents)
-GUILD_IDS = [int(gid.strip()) for gid in os.getenv("GUILD_IDS", "").split(",") if gid.strip()]
-GUILD   = discord.Object(id=GUILD_IDS[0]) if GUILD_IDS else None
+GUILD   = discord.Object(id=int(os.getenv("GUILD_ID")))
 intents = discord.Intents.default()
 intents.members = True   # ← เพิ่มบรรทัดนี้ (ต้องการสำหรับ add_roles/remove_roles)
 
@@ -997,7 +996,7 @@ class AdminCommands(
             )
         else:
             await interaction.response.send_message(
-                f"*{user.display_name} ไม่มี {item_name} {item['emoji']}*", ephemeral=True)
+                f"*{user.display_name} ไม่มี {item_name}*", ephemeral=True)
 
         # # DM แจ้ง user
         # effect = item.get("effect", {})
@@ -1590,13 +1589,8 @@ async def trade_cmd(interaction: discord.Interaction, user: discord.Member):
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
-    
-    # ลูปเพื่อ Sync คำสั่งให้เข้าทั้ง 2 เซิร์ฟเวอร์ทันที
-    for guild_id in GUILD_IDS:
-        guild = discord.Object(id=guild_id)
-        bot.tree.copy_global_to(guild=guild) # ก๊อปปี้คำสั่งไปที่กิลด์นั้นๆ
-        await bot.tree.sync(guild=guild)
+    database.setup()
+    await bot.tree.sync(guild=GUILD)
     if not scheduled_message_task.is_running():
         scheduled_message_task.start()
     print("=" * 40)
