@@ -21,7 +21,11 @@ import re
 load_dotenv()
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="v!", intents=intents)
-GUILD   = discord.Object(id=int(os.getenv("GUILD_ID")))
+GUILD_IDS = [
+    discord.Object(id=int(gid.strip()))
+    for gid in os.getenv("GUILD_IDS", "").split(",")
+    if gid.strip()
+]
 intents = discord.Intents.default()
 intents.members = True   # ← เพิ่มบรรทัดนี้ (ต้องการสำหรับ add_roles/remove_roles)
 
@@ -505,25 +509,25 @@ class FarmCommands(app_commands.Group, name="farm", description="Plant and harve
         info = database.PLANTS[plant_type]
         if not database.has_item(uid, info["seed_id"]):
             await interaction.response.send_message(
-                f"*You don't have **{info['name']} seeds** in your inventory (buy at `/shop`)*", ephemeral=True); return
+                f"*คุณไม่มีเมล็ด **{info['name']}** ในกระเป๋านะ? ลองไปหาซื้อสักหน่อยดูไหม?*", ephemeral=True); return
         database.remove_item(uid, info["seed_id"], 1)
         database.plant_crop(uid, plant_type)
         await interaction.response.send_message(
-            f"*Successfully planted {info['emoji']}!*\n"
-            f"-# *You can harvest it in **{info['grow_minutes']} minutes** — check with `/farm check`*")
+            f"*ปลูก {info['emoji']} สำเร็จ!*\n"
+            f"-# *สามารถเก็บเกี่ยวได้ใน **{info['grow_minutes']} นาที** — ตรวจสอบได้ด้วย `/farm check`*")
 
     @app_commands.command(name="check", description="Check the status of your farm")
     async def check(self, interaction: discord.Interaction):
         farms = database.get_farms(str(interaction.user.id))
         if not farms:
             await interaction.response.send_message(
-                "*You don't have any crops in your farm. Try `/farm plant` first!*", ephemeral=True); return
-        embed = discord.Embed(title="<:greensapling:1521901310742495332> **__Your Farm__**", color=discord.Color.green())
+                "*คุณไม่มีพืชใดในแปลงของคุณ ลอง `/farm plant` ดูสิ?*", ephemeral=True); return
+        embed = discord.Embed(title="<:greensapling:1521901310742495332> **__แปลงของคุณ__**", color=discord.Color.green())
         for f in farms:
             info   = database.PLANTS[f["plant_type"]]
-            status = "***Ready to harvest!***" if f["is_ready"] else f"*In progress **{format_time(f['seconds_left'])}***"
+            status = "***เก็บเกี่ยวได้แล้ว!***" if f["is_ready"] else f"*น้องกำลังโต **{format_time(f['seconds_left'])}***"
             embed.add_field(name=f"{info['emoji']} {info['name']}", value=status, inline=True)
-        embed.set_footer(text="Use `/farm harvest` when crops are ready")
+        embed.set_footer(text="ใช้ `/farm harvest` เพื่อเช็ค")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="harvest", description="Harvest ready crops and collect yields")
@@ -532,7 +536,7 @@ class FarmCommands(app_commands.Group, name="farm", description="Plant and harve
         done = database.harvest_ready(uid)
         if not done:
             await interaction.response.send_message(
-                "*No crops are ready to harvest. Use `/farm check` to see the status.*", ephemeral=True); return
+                "*ไม่มีพืชใดพร้อมให้เก็บเกี่ยว ลองใช้ `/farm check` เพื่อตรวจสอบสถานะ*", ephemeral=True); return
         summary: dict[str, int] = {}
         for f in done:
             info = database.PLANTS[f["plant_type"]]
@@ -541,8 +545,8 @@ class FarmCommands(app_commands.Group, name="farm", description="Plant and harve
             summary[info["crop_id"]] = summary.get(info["crop_id"], 0) + qty
         lines = [f"{database.ITEMS[k]['emoji']} **{database.ITEMS[k]['name']}** ×{v}"
                  for k, v in summary.items()]
-        embed = discord.Embed(title="**Harvest Successful!**", description="\n".join(lines), color=discord.Color.yellow())
-        embed.set_footer(text=f"Harvested from {len(done)} plants • Sell at /shop")
+        embed = discord.Embed(title="**เก็บเกี่ยวสำเร็จ!**", description="\n".join(lines), color=discord.Color.yellow())
+        embed.set_footer(text=f"เก็บเกี่ยว {len(done)} • สามารถขายได้ที่ /shop")
         await interaction.response.send_message(embed=embed)
 
 
@@ -942,9 +946,8 @@ class AdminCommands(
 
         # แจ้ง admin
         await interaction.response.send_message(
-            f"✅ give __{item['name']}, {item['emoji']}__ ×{quantity} "
-            f"to **{user.display_name}** successfully!"
-            f"คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
+            f"**{user.display_name}** ได้รับ __{item['name']}, {item['emoji']}__ ×{quantity}"
+            f" คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
         )
         
     @app_commands.command(name="give_misc", description="give item (no effect) to player (Admin only)")
@@ -963,13 +966,13 @@ class AdminCommands(
         if not await self._require_admin(interaction): return
         item = database.ITEMS.get(item_id)
         if not item:
-            await interaction.response.send_message(f"*Item not found!*", ephemeral=True)
+            await interaction.response.send_message(f"*ไม่เจอไอเทมนะ!*", ephemeral=True)
             return
         database.get_or_create_user(str(user.id))
         database.add_item(str(user.id), item_id, quantity)
         await interaction.response.send_message(
-            f"*give {item['emoji']} **{item['name']}** ×{quantity}* "
-            f"*to __{user.display_name}__ successfully!*"
+            f"**{user.display_name}** ได้รับ __{item['name']}, {item['emoji']}__ ×{quantity}"
+            f" คุณสามารถตรวจสอบใน inventory ได้ด้วยคำสั่ง `/inventory`"
         )
 
     @app_commands.command(name="take_item", description="remove item from player (Admin only)")
@@ -987,18 +990,17 @@ class AdminCommands(
         ), None)
         if not found_id:
             await interaction.response.send_message(
-                f"*Item not found!*", ephemeral=True)
+                f"*ไม่เจอไอเทมนะ!*", ephemeral=True)
             return
         ok = database.remove_item(str(user.id), found_id, quantity)
         if ok:
             item = database.ITEMS[found_id]
             await interaction.response.send_message(
-                f"*remove {item['emoji']} **{item['name']}** ×{quantity}*"
-                f"*from __{user.display_name}__ successfully!*"
+                f"**{user.display_name}** ได้สูญเสีย __{item['name']}, {item['emoji']}__ ×{quantity}"
             )
         else:
             await interaction.response.send_message(
-                f"*{user.display_name} has insufficient {item_name}*", ephemeral=True)
+                f"*{user.display_name} ไม่มี {item_name}*", ephemeral=True)
 
         # # DM แจ้ง user
         # effect = item.get("effect", {})
@@ -1031,7 +1033,7 @@ class AdminCommands(
         app_commands.Choice(name="VIT% +N",    value="vit_bonus"),
         app_commands.Choice(name="Fire Resistance",        value="fire_resist"),
         app_commands.Choice(name="Max HP +N",         value="max_hp_bonus"),
-        app_commands.Choice(name="Max MANA +N",       value="max_mana_bonus"),
+        app_commands.Choice(name="Max MP +N",       value="max_mana_bonus"),
     ])
     async def give_buff(
         self, interaction: discord.Interaction,
@@ -1050,8 +1052,8 @@ class AdminCommands(
 
         expire_text = f"expire in <t:{expires_at}:R>" if expires_at else "no expiration"
         await interaction.response.send_message(
-            f"**🌟 give buff to **{user.display_name}** successfully!\n**"
-            f"-# Buff *{description}* `({expire_text})`"
+            f"**{user.display_name}** ได้รับ buff!\n"
+            f"-# buff *{description}* `({expire_text})`"
         )
         # try:
         #     await user.send(
@@ -1100,8 +1102,8 @@ class AdminCommands(
         expire_text = f"expire in <t:{expires_at}:R>" if expires_at else "no expiration"
         effect_text = f" (reduce by {value})" if buff_type == "dice_bonus" else ""
         await interaction.response.send_message(
-            f"**⚠️ give debuff to **{user.display_name}** successfully!\n**"
-            f"Debuff **__{description}__**{effect_text} ({expire_text})\n")
+            f"**{user.display_name}** ถูก debuff เล่นงาน!\n"
+            f"-# Debuff **__{description}__**{effect_text} ({expire_text})\n")
         # try:
         #     await user.send(
         #         f"⚠️ คุณได้รับ debuff **{description}**!\n"
@@ -1180,8 +1182,8 @@ async def choose(interaction: discord.Interaction, choices: str):
     picked = random.choice(options)
 
     await interaction.response.send_message(
-        f"<:lg:1523335760818868396> ***{interaction.user.display_name}** let the fate decide...\n*"
-        f"*fate have chosen ... **{picked}**!*"
+        f"<:lg:1523335760818868396> ***{interaction.user.display_name}** ปล่อยให้ชะตาตัดสิน...\n*"
+        f"*โชคชะตาได้เลือก ... **{picked}**!*"
     )
 
 
@@ -1196,7 +1198,7 @@ async def profile(interaction: discord.Interaction):
     embed = discord.Embed(title=f"profile of {interaction.user.display_name}", color=discord.Color.dark_red())
     embed.set_thumbnail(url=interaction.user.display_avatar.url)
     # embed.add_field(name="📊 เลเวล / EXP",    value=f"Lv. **{u['level']}**\n{exp_bar(u['exp'], u['exp_max'])}", inline=True)
-    embed.add_field(name="<:hp_heart:1521868611524759704> **HP**  <:mp_heart:1521868748431163492> **MANA**", value=f"`{u['hp']}/{u['hp_max']}` | `{u['mana']}/{u['mana_max']}`", inline=True)
+    embed.add_field(name="<:hp_heart:1521868611524759704> **HP**  <:mp_heart:1521868748431163492> **MP**", value=f"`{u['hp']}/{u['hp_max']}` | `{u['mana']}/{u['mana_max']}`", inline=True)
     embed.add_field(name="**SAN**", value=f"`{u['san']}/{u['san_max']}`", inline=True)
     # embed.add_field(name="\u200b", value="\u200b", inline=False)
     # embed.add_field(name="status",
@@ -1217,7 +1219,7 @@ async def inventory(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed)
     else:
         await interaction.response.send_message(
-            "inventory is empty!\nTry `/mine` or ` `/farm plant`", ephemeral=True)
+            "กระเป๋าของคุณว่างเปล่า\nลองไปเดินเล่นดูสักหน่อยดีไหม?", ephemeral=True)
 
 
 @bot.tree.command(name="shop", description="check the shop", guild=GUILD)
@@ -1273,7 +1275,7 @@ async def mine(interaction: discord.Interaction):
     database.add_item(uid, ore_data["id"], qty)
     tier_colors = {
         "Common": discord.Color.light_grey(), "Uncommon": discord.Color.green(),
-        "Rare": discord.Color.blue(), "Epic": discord.Color.purple(), "Legendary": discord.Color.gold(),
+        "Rare": discord.Color.blue(), "Epic": discord.Color.purple(), "Legendary": discord.Color.orange(), "Mythic": discord.Color.gold(),
     }
     embed = discord.Embed(
         title="Mining Results",
@@ -1283,14 +1285,14 @@ async def mine(interaction: discord.Interaction):
                      f"<:mn_bag:1523012990306226236> Value: {item['value']*qty:,} Coin"),
         color=tier_colors.get(item["tier"], discord.Color.default())
     )
-    embed.set_footer(text="You can mine again in 30 seconds")
+    embed.set_footer(text="คุณสามารถขุดแร่ได้อีกครั้งใน 30 วินาที")
     await interaction.followup.send(embed=embed)
 
 @mine.error
 async def mine_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.CommandOnCooldown):
         await interaction.response.send_message(
-            f"Wait **{error.retry_after:.0f} seconds** before mining again", ephemeral=True)
+            f"คุณสามารถขุดแร่ได้อีกครั้งใน **{error.retry_after:.0f} วินาที**", ephemeral=True)
 
 
 # @bot.tree.command(name="explore", description="สำรวจป่าเก็บผลไม้ 🌿", guild=GUILD)
