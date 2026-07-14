@@ -21,7 +21,8 @@ import re
 load_dotenv()
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="v!", intents=intents)
-GUILD   = discord.Object(id=int(os.getenv("GUILD_ID")))
+GUILD_IDS = [int(gid.strip()) for gid in os.getenv("GUILD_IDS", "").split(",") if gid.strip()]
+GUILDS    = [discord.Object(id=gid) for gid in GUILD_IDS]
 intents = discord.Intents.default()
 intents.members = True   # ← เพิ่มบรรทัดนี้ (ต้องการสำหรับ add_roles/remove_roles)
 
@@ -1109,20 +1110,20 @@ class AdminCommands(
         #     pass
         
 
-bot.tree.add_command(FarmCommands(),  guild=GUILD)
-bot.tree.add_command(AdminCommands(), guild=GUILD)
+bot.tree.add_command(FarmCommands())
+bot.tree.add_command(AdminCommands())
 
 
 # ╔══════════════════════════════════════════════════════════╗
 #  SECTION 6 — STANDALONE TOP-LEVEL COMMANDS
 # ╚══════════════════════════════════════════════════════════╝
 
-@bot.tree.command(name="ping", description="test bot", guild=GUILD)
+@bot.tree.command(name="ping", description="test bot")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f"**Pong!** {round(bot.latency*1000)}ms")
 
 
-@bot.tree.command(name="roll", description="roll d20", guild=GUILD)
+@bot.tree.command(name="roll", description="roll d20")
 async def roll(interaction: discord.Interaction):
     uid = str(interaction.user.id)
     database.remove_expired_buffs(uid)
@@ -1162,7 +1163,7 @@ async def roll(interaction: discord.Interaction):
                f"-# เหลือจะเชื่อ.. แท็กสต๊าฟเพื่อรันผลลัพธ์เอานะ..")
     await interaction.response.send_message(msg)
     
-@bot.tree.command(name="choose", description="Let the fate decide", guild=GUILD)
+@bot.tree.command(name="choose", description="Let the fate decide")
 @app_commands.describe(choices="Options separated by | e.g., A | B | C | D")
 async def choose(interaction: discord.Interaction, choices: str):
     options = [c.strip() for c in choices.split("|") if c.strip()]
@@ -1183,7 +1184,7 @@ async def choose(interaction: discord.Interaction, choices: str):
     )
 
 
-@bot.tree.command(name="profile", description="check your profile", guild=GUILD)
+@bot.tree.command(name="profile", description="check your profile")
 async def profile(interaction: discord.Interaction):
     uid       = str(interaction.user.id)
     u, _ = database.get_or_create_user(uid)
@@ -1208,7 +1209,7 @@ async def profile(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=ProfileView(uid))
 
 
-@bot.tree.command(name="inventory", description="check your inventory", guild=GUILD)
+@bot.tree.command(name="inventory", description="check your inventory")
 async def inventory(interaction: discord.Interaction):
     embed = await build_inventory_embed(interaction.user)
     if embed:
@@ -1218,7 +1219,7 @@ async def inventory(interaction: discord.Interaction):
             "กระเป๋าของคุณว่างเปล่า\nลองไปเดินเล่นดูสักหน่อยดีไหม?", ephemeral=True)
 
 
-@bot.tree.command(name="shop", description="check the shop", guild=GUILD)
+@bot.tree.command(name="shop", description="check the shop")
 async def shop(interaction: discord.Interaction):
     uid   = str(interaction.user.id)
     u, _  = database.get_or_create_user(uid)
@@ -1238,7 +1239,7 @@ async def shop(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=ShopCategoryView(uid))
 
 
-@bot.tree.command(name="quest", description="check your quests", guild=GUILD)
+@bot.tree.command(name="quest", description="check your quests")
 async def quest(interaction: discord.Interaction):
     uid    = str(interaction.user.id)
     quests = database.get_user_quests(uid)
@@ -1258,7 +1259,7 @@ async def quest(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-@bot.tree.command(name="mine", description="dig for ore", guild=GUILD)
+@bot.tree.command(name="mine", description="dig for ore")
 @app_commands.checks.cooldown(1, 30.0, key=lambda i: i.user.id)
 async def mine(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -1291,7 +1292,7 @@ async def mine_error(interaction: discord.Interaction, error: app_commands.AppCo
             f"คุณสามารถขุดแร่ได้อีกครั้งใน **{error.retry_after:.0f} วินาที**", ephemeral=True)
 
 
-# @bot.tree.command(name="explore", description="สำรวจป่าเก็บผลไม้ 🌿", guild=GUILD)
+# @bot.tree.command(name="explore", description="สำรวจป่าเก็บผลไม้ 🌿")
 # @app_commands.checks.cooldown(1, 60.0, key=lambda i: i.user.id)
 # async def explore(interaction: discord.Interaction):
 #     await interaction.response.defer()
@@ -1335,7 +1336,7 @@ async def mine_error(interaction: discord.Interaction, error: app_commands.AppCo
 #  วางต่อจาก @explore.error ได้เลย (ก่อน @transfer และ @trade)
 # ============================================================
 
-# @bot.tree.command(name="daily", description="รับรางวัลประจำวัน 🎁", guild=GUILD)
+# @bot.tree.command(name="daily", description="รับรางวัลประจำวัน 🎁")
 # async def daily(interaction: discord.Interaction):
 #     uid = str(interaction.user.id)
 #     database.get_or_create_user(uid)
@@ -1404,7 +1405,7 @@ async def mine_error(interaction: discord.Interaction, error: app_commands.AppCo
 
 #     await interaction.response.send_message(embed=embed)
     
-@bot.tree.command(name="use", description="use item from inventory", guild=GUILD)
+@bot.tree.command(name="use", description="use item from inventory")
 @app_commands.describe(item_name="name of the item to use")
 async def use_item(interaction: discord.Interaction, item_name: str):
     uid = str(interaction.user.id)
@@ -1498,7 +1499,7 @@ async def use_item(interaction: discord.Interaction, item_name: str):
     await interaction.response.send_message(embed=embed)
 
 
-@bot.tree.command(name="transfer", description="Transfer coins and sil to another user", guild=GUILD)
+@bot.tree.command(name="transfer", description="Transfer coins and sil to another user")
 @app_commands.describe(user="The user to transfer to", coin="Amount of Coin to transfer", sil="Amount of Sil to transfer")
 async def transfer_cmd(
     interaction: discord.Interaction,
@@ -1523,7 +1524,7 @@ async def transfer_cmd(
         f"-# click ✅ to accept or ❌ to decline `(expires in 60 seconds)`",
         view=view)
 
-@bot.tree.command(name="countdown", description="Countdown timer ⏱", guild=GUILD)
+@bot.tree.command(name="countdown", description="Countdown timer ⏱")
 @app_commands.describe(seconds="Number of seconds (max 3600 = 1 hour)")
 async def countdown(
     interaction: discord.Interaction,
@@ -1548,7 +1549,7 @@ async def countdown(
     asyncio.create_task(notify())
 
 
-@bot.tree.command(name="trade", description="Offer to trade items and coins with another user 🔄", guild=GUILD)
+@bot.tree.command(name="trade", description="Offer to trade items and coins with another user 🔄")
 @app_commands.describe(user="The user you want to trade with")
 async def trade_cmd(interaction: discord.Interaction, user: discord.Member):
     if user.id == interaction.user.id:
@@ -1590,7 +1591,14 @@ async def trade_cmd(interaction: discord.Interaction, user: discord.Member):
 @bot.event
 async def on_ready():
     database.setup()
-    await bot.tree.sync(guild=GUILD)
+
+    if not GUILDS:
+        print("⚠️  ไม่พบ GUILD_IDS ใน .env — โปรดตั้งค่า GUILD_IDS=id1,id2")
+    for g in GUILDS:
+        bot.tree.copy_global_to(guild=g)
+        synced = await bot.tree.sync(guild=g)
+        print(f"   ↳ synced {len(synced)} commands to guild {g.id}")
+
     if not scheduled_message_task.is_running():
         scheduled_message_task.start()
     print("=" * 40)
