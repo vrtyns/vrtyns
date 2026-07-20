@@ -1147,20 +1147,20 @@ async def roll(interaction: discord.Interaction):
 
     if result in (1, 20):
         label = "<:dice_pixel:1523010248590364905>" if result == 20 else "**CRITICAL FAIL!**"
-        msg   = (f"{label} {interaction.user.mention} rolled **{result}**{bonus_text}!\n"
-                 f"-# โปรดแท็กสต๊าฟเพื่อรัน**อีเว้นท์พิเศษ**..")
+        msg   = (f"{label} {interaction.user.mention} rolled **{result}**{bonus_text}!\n")
+                #  f"-# โปรดแท็กสต๊าฟเพื่อรัน**อีเว้นท์พิเศษ**..")
     elif 2 <= result <= 7:
-        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n"
-               f"-# ออกแอคชั่นไม่สำเร็จ! สามารถลองใหม่และทอยอีกครั้งได้ เมื่อผ่าน สามารถรีแอคแล้วแท็กสต๊าฟได้")
+        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n")
+            #    f"-# ออกแอคชั่นไม่สำเร็จ! สามารถลองใหม่และทอยอีกครั้งได้ เมื่อผ่าน สามารถรีแอคแล้วแท็กสต๊าฟได้")
     elif 8 <= result <= 15:
-        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n"
-               f"-# แอคชั่นสำเร็จ! รีแอคแล้วแท็กสต๊าฟเพื่อรันต่อ")
+        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n")
+            #    f"-# แอคชั่นสำเร็จ! รีแอคแล้วแท็กสต๊าฟเพื่อรันต่อ")
     elif 16 <= result <= 19:  # 16-19
-        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n"
-               f"-# เริ่ด! แอคชั่นสำเร็จอย่างดี! รีแอคแล้วแท็กสต๊าฟเพื่อรันต่อ")
+        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n")
+            #    f"-# เริ่ด! แอคชั่นสำเร็จอย่างดี! รีแอคแล้วแท็กสต๊าฟเพื่อรันต่อ")
     else:
-        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n"
-               f"-# เหลือจะเชื่อ.. แท็กสต๊าฟเพื่อรันผลลัพธ์เอานะ..")
+        msg = (f"<:dice_pixel:1523010248590364905> {interaction.user.mention} rolled **{result}**{bonus_text}\n")
+            #    f"-# เหลือจะเชื่อ.. แท็กสต๊าฟเพื่อรันผลลัพธ์เอานะ..")
     await interaction.response.send_message(msg)
     
 @bot.tree.command(name="choose", description="Let the fate decide")
